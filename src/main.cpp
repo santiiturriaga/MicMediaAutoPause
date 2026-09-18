@@ -300,15 +300,27 @@ int wmain(int argc, wchar_t** argv) {
     bool foreground = false;
     bool statusOnly = false;
     bool noLog = false;
+    bool stopOnly = false;
     for (int i = 1; i < argc; ++i) {
         std::wstring arg = lower(argv[i]);
         if (arg == L"--foreground") foreground = true;
         else if (arg == L"--status") statusOnly = true;
         else if (arg == L"--no-log") noLog = true;
+        else if (arg == L"--stop") stopOnly = true;
         else if (arg == L"--version") {
-            std::wcout << L"MicMediaAutoPause 1.0.0\n";
+            std::wcout << L"MicMediaAutoPause 1.1.0\n";
             return 0;
         }
+    }
+
+    if (stopOnly) {
+        HANDLE stopEvent = OpenEventW(EVENT_MODIFY_STATE, FALSE, L"Local\\MicMediaAutoPause.Stop");
+        if (!stopEvent) {
+            return GetLastError() == ERROR_FILE_NOT_FOUND ? 0 : 4;
+        }
+        const BOOL signaled = SetEvent(stopEvent);
+        CloseHandle(stopEvent);
+        return signaled ? 0 : 5;
     }
 
     const auto dir = exe_dir();
