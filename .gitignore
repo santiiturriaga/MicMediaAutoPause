@@ -1,0 +1,6 @@
+﻿build/
+dist/
+release/
+*.log
+*.bak
+.vs/
