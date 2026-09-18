@@ -1,5 +1,5 @@
 #define MyAppName "MicMediaAutoPause"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppPublisher "Santiago Iturriaga"
 #define MyAppURL "https://github.com/santiiturriaga/MicMediaAutoPause"
 #define MyAppExeName "MicMediaAutoPause.exe"
@@ -18,7 +18,7 @@ DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 OutputDir=..\release
-OutputBaseFilename=MicMediaAutoPause-Setup-v1.1.0
+OutputBaseFilename=MicMediaAutoPause-Setup-v1.2.0
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern

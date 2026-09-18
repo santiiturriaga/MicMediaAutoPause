@@ -25,7 +25,9 @@ using namespace std::chrono_literals;
 
 struct Config {
     std::vector<std::wstring> triggerApps{L"msedge.exe"};
-    std::vector<std::wstring> mediaPatterns{L"spotify", L"msedge"};
+    bool pauseAllMedia = true;
+    std::vector<std::wstring> mediaPatterns;
+    std::vector<std::wstring> excludedMediaPatterns;
     DWORD pollMs = 150;
     DWORD resumeDelayMs = 350;
     bool logging = true;
@@ -83,9 +85,16 @@ static Config load_config(const fs::path& path) {
         buffer, static_cast<DWORD>(std::size(buffer)), path.c_str());
     cfg.triggerApps = split_csv(buffer);
 
-    GetPrivateProfileStringW(L"MicMediaAutoPause", L"MediaApps", L"spotify,msedge",
+    cfg.pauseAllMedia =
+        GetPrivateProfileIntW(L"MicMediaAutoPause", L"PauseAllMedia", 1, path.c_str()) != 0;
+
+    GetPrivateProfileStringW(L"MicMediaAutoPause", L"MediaApps", L"",
         buffer, static_cast<DWORD>(std::size(buffer)), path.c_str());
     cfg.mediaPatterns = split_csv(buffer);
+
+    GetPrivateProfileStringW(L"MicMediaAutoPause", L"ExcludeMediaApps", L"",
+        buffer, static_cast<DWORD>(std::size(buffer)), path.c_str());
+    cfg.excludedMediaPatterns = split_csv(buffer);
 
     cfg.pollMs = std::clamp<DWORD>(
         GetPrivateProfileIntW(L"MicMediaAutoPause", L"PollMs", 150, path.c_str()), 25, 5000);
@@ -218,6 +227,13 @@ struct PausedSession {
 
 static bool media_matches(std::wstring source, const Config& cfg) {
     source = lower(std::move(source));
+
+    for (const auto& pattern : cfg.excludedMediaPatterns) {
+        if (source.find(pattern) != std::wstring::npos) return false;
+    }
+
+    if (cfg.pauseAllMedia) return true;
+
     for (const auto& pattern : cfg.mediaPatterns) {
         if (source.find(pattern) != std::wstring::npos) return true;
     }
@@ -308,7 +324,7 @@ int wmain(int argc, wchar_t** argv) {
         else if (arg == L"--no-log") noLog = true;
         else if (arg == L"--stop") stopOnly = true;
         else if (arg == L"--version") {
-            std::wcout << L"MicMediaAutoPause 1.1.0\n";
+            std::wcout << L"MicMediaAutoPause 1.2.0\n";
             return 0;
         }
     }

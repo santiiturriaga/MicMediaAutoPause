@@ -1,39 +1,41 @@
 # MicMediaAutoPause
 
-**Talk in ChatGPT â†’ Spotify/YouTube pauses. Stop talking â†’ it resumes.**
+**Microphone active -> all playing media pauses. Microphone released -> only media this app paused resumes.**
 
-MicMediaAutoPause is a tiny native Windows utility that watches microphone use by apps you choose and pauses matching media automatically. The important part: it remembers **only the media it paused**, so music that was already paused stays paused.
+MicMediaAutoPause is a tiny native Windows utility that watches microphone use by configured applications and automatically manages Windows media sessions. By default it pauses **every currently playing media session Windows exposes**, so it is not tied to Spotify, a particular browser, or a fixed list of music apps.
 
-The default configuration is built around ChatGPT dictation in Microsoft Edge with Spotify or YouTube, but both trigger apps and media apps are configurable.
+If multiple apps are playing at once, they are paused independently and all sessions successfully paused by MicMediaAutoPause are remembered. If you manually resume one of them while the microphone is still active, MicMediaAutoPause does not immediately pause it again, and it will not issue another play command to that already-playing session when the microphone is released.
 
+- Works with any app or browser that exposes a Windows GSMTC/SMTC media session.
+- Handles multiple simultaneously playing media sessions.
+- Resumes only sessions it successfully paused; media that was already paused stays paused.
 - Native Windows executable: no Electron, browser extension, service, or bundled runtime.
 - Starts automatically at sign-in when installed with the default installer option.
 - Does not open the microphone, record audio, transcribe speech, or send telemetry.
-- Can be completely removed from **Settings â†’ Apps â†’ Installed apps**.
+- Can be completely removed from **Settings -> Apps -> Installed apps**.
 
 ## One-click install
 
-Download **`MicMediaAutoPause-Setup-v1.1.0.exe`** from the latest GitHub Release and open it.
+Download **`MicMediaAutoPause-Setup-v1.2.0.exe`** from the latest GitHub Release and open it.
 
 The installer:
 
 1. Installs the app for your Windows user under `%LOCALAPPDATA%\Programs\MicMediaAutoPause`.
 2. Enables **Start MicMediaAutoPause automatically when I sign in** by default. You can uncheck it during setup.
 3. Starts the utility after installation.
-4. Adds a normal **MicMediaAutoPause** entry to **Settings â†’ Apps â†’ Installed apps**.
+4. Adds a normal **MicMediaAutoPause** entry to **Settings -> Apps -> Installed apps**.
 
 Uninstalling from Windows stops the running utility, removes its auto-start entry, removes the installed program files, and deletes its generated log. No administrator access is required.
 
-Because public release binaries are currently unsigned, Windows SmartScreen may show an **Unknown Publisher** warning. The full source and build script are public, so advanced users can build it themselves instead.
+Public release binaries are currently unsigned, so Windows SmartScreen may show an **Unknown Publisher** warning. The full source and build scripts are public for users who prefer to build it themselves.
 
-## What it does
+## Media behavior
 
-1. Watches Windows' per-application microphone-use state for configured trigger applications.
-2. On **not using mic â†’ using mic**, asks matching Windows media sessions to pause.
-3. Remembers only sessions it successfully paused.
-4. On **using mic â†’ not using mic**, resumes those remembered sessions if they are still paused.
+With the default configuration, MicMediaAutoPause asks Windows for all current media sessions and pauses every session whose playback state is **Playing**. It stores each session for which the Windows pause request succeeds.
 
-It never opens the microphone, captures audio, transcribes anything, or sends telemetry.
+When microphone use ends, it checks those remembered sessions again. Only sessions that are still **Paused** are sent a play request. If a session has already been resumed, stopped, closed, or otherwise changed state, it is left alone.
+
+That means, for example, if Spotify and a browser video are both playing, both can pause together and both can resume. If you manually resume Spotify while still using the microphone, Spotify is left playing while the other remembered session remains paused until microphone use ends.
 
 ## Configuration
 
@@ -42,17 +44,40 @@ It never opens the microphone, captures audio, transcribes anything, or sends te
 ```ini
 [MicMediaAutoPause]
 TriggerApps=msedge.exe
-MediaApps=spotify,msedge
+PauseAllMedia=1
+ExcludeMediaApps=
+MediaApps=
 PollMs=150
 ResumeDelayMs=350
 Logging=1
 ```
 
 - `TriggerApps`: comma-separated executable names whose microphone use triggers pausing.
-- `MediaApps`: comma-separated substrings matched against Windows media-session source IDs.
+- `PauseAllMedia=1`: manage every currently-playing Windows media session. This is the default.
+- `ExcludeMediaApps`: optional comma-separated substrings to ignore while `PauseAllMedia=1`.
+- `PauseAllMedia=0`: switch to allowlist mode.
+- `MediaApps`: comma-separated substrings to manage when allowlist mode is enabled.
 - `PollMs`: microphone-state polling interval.
 - `ResumeDelayMs`: short debounce before resuming.
 - `Logging`: `1` or `0`.
+
+Example: manage everything except Discord and Teams:
+
+```ini
+PauseAllMedia=1
+ExcludeMediaApps=discord,teams
+```
+
+Example: manage only Spotify and Edge:
+
+```ini
+PauseAllMedia=0
+MediaApps=spotify,msedge
+```
+
+## Compatibility
+
+MicMediaAutoPause controls **Windows media sessions**, not raw audio streams. Most modern music/video applications and major browsers expose media through Windows system media controls. An application that plays audio without creating a GSMTC/SMTC media session will not be visible to MicMediaAutoPause.
 
 ## Logs
 
@@ -73,7 +98,7 @@ Set `Logging=0` in `config.ini` or launch with `--no-log` to disable it.
 
 ## Portable/manual install
 
-If you do not want the installer, the release also includes a portable ZIP. The `scripts` folder in the repository contains the Task Scheduler install/stop/uninstall helpers.
+If you do not want the installer, each release also includes a portable ZIP. The `scripts` folder in the repository contains Task Scheduler install/stop/uninstall helpers.
 
 ## Build
 
